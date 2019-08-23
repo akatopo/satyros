@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, minimum-scale=0.1" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <meta name="theme-color" content="#0e0e0e" />
+    <title>🐐</title>
+    <style type="text/css">
+      @font-face {
+        font-family: 'Livvic';
+        src: url('Livvic-Regular.ttf') format('truetype');
+      }
+      body {
+        font-size: 15px;
+        font-family: 'Livvic', sans-serif;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        background-color: #0e0e0e;
+        color: bisque;
+      }
+
+      @media (max-width: 768px) {
+        body {
+          font-size: 0.8em;
+        }
+      }
+
+      .🐐 {
+        object-fit: contain;
+        height: 100%;
+        width: 100%;
+      }
+
+      .🐐-container {
+        overflow: hidden;
+        margin: auto;
+        height: 100%;
+        max-height: 500px;
+        max-height: 70vh;
+        position: relative;
+      }
+
+      footer {
+        text-align: center;
+      }
+
+      .🐐-layer {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        left: 0;
+      }
+
+      footer > p {
+        margin: 10px 0;
+        margin: 1vh 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="🐐-container">
+      <img class="🐐" src="/eye-white.png" alt="" />
+      <div class="🐐-layer">
+        <img class="🐐 👁" src="/eye.png" alt="" />
+      </div>
+      <div class="🐐-layer">
+        <img class="🐐" src="/eyeless-goat.png" alt="" />
+      </div>
+    </div>
+    <footer>
+      <p>🐐 by Barry Moser</p>
+    </footer>
+    <script type="module">
+      const goatWidth = 729;
+      const goatHeight = 800;
+      const goatWidthToHeightRatio = goatWidth / goatHeight;
+      const eyeWidth = 44;
+      const eyeHeight = 19;
+      const eyeXFraction = eyeWidth / goatWidth;
+      const eyeYFraction = eyeHeight / goatHeight;
+
+      window.onload = () => {
+        const eyeLayerElement = document.querySelector('.👁');
+
+        if (window.DeviceOrientationEvent) {
+          const wrappedPaint = createCallbackStatusObject(
+            paint.bind(undefined, getMovementFractionsFromOrientation),
+          );
+          window.addEventListener(
+            'deviceorientation',
+            createAnimationFrameEventHandler(wrappedPaint),
+            false,
+          );
+        }
+
+        const wrappedPaint = createCallbackStatusObject(
+          paint.bind(undefined, getMovementFractionsFromMouseMove),
+        );
+        window.addEventListener(
+          'mousemove',
+          createAnimationFrameEventHandler(wrappedPaint),
+          false,
+        );
+
+        function createAnimationFrameEventHandler(callbackWrapper) {
+          return e => {
+            if (callbackWrapper.isPending()) {
+              return;
+            }
+            window.requestAnimationFrame(callbackWrapper.cb.bind(undefined, e));
+            callbackWrapper.reset();
+          };
+        }
+
+        function getMovementFractionsFromOrientation(e) {
+          const { gamma, beta } = e;
+          let xFraction;
+          let yFraction;
+
+          console.log(beta, gamma);
+
+          if (isWithin(0, 90, beta) && isWithin(-25, 25, gamma)) {
+            // portrait
+            xFraction = clamp(-25, 25, gamma) / 25;
+            yFraction = (clamp(0, 90, beta) - 45) / 45;
+          } else if (
+            isWithin(0, 25, Math.abs(beta)) &&
+            isWithin(0, 76, Math.abs(gamma))
+          ) {
+            // landscape
+            xFraction = (-Math.sign(gamma) * clamp(-25, 25, beta)) / 25;
+            yFraction = (clamp(0, 76, Math.abs(gamma)) - 38) / 38;
+          } else {
+            return [undefined, undefined];
+          }
+
+          // invert so its dead cold eyes look deep inside your soul
+          return [-xFraction, -yFraction];
+        }
+
+        function clamp(min, max, number) {
+          return Math.min(Math.max(min, number), max);
+        }
+
+        function isWithin(min, max, number) {
+          return number >= min && number <= max;
+        }
+
+        function getMovementFractionsFromMouseMove(e) {
+          const { clientX, clientY } = e;
+          const { innerHeight, innerWidth } = window;
+
+          const xFraction = (clientX - innerWidth / 2) / (innerWidth / 2);
+          const yFraction = (clientY - innerHeight / 2) / (innerHeight / 2);
+
+          return [xFraction, yFraction];
+        }
+
+        function paint(getFractions, e) {
+          const [xFraction, yFraction] = getFractions(e);
+          if (xFraction === undefined || yFraction === undefined) {
+            return;
+          }
+          const [
+            scaledGoatWidth,
+            scaledGoatHeight,
+          ] = getContainedImageDimensions(
+            eyeLayerElement,
+            goatWidthToHeightRatio,
+          );
+          const [scaledEyeWidth, scaledEyeHeight] = getEyeDimensions(
+            scaledGoatWidth,
+            scaledGoatHeight,
+          );
+
+          const xTranslation = (scaledEyeWidth / 4) * xFraction;
+          const yTranslation = (scaledEyeHeight / 4) * yFraction;
+
+          eyeLayerElement.style.transform = `translate(${xTranslation}px, ${yTranslation}px)`;
+        }
+      };
+
+      function createCallbackStatusObject(cb) {
+        let done = true;
+        return {
+          cb(...args) {
+            done = true;
+            return cb(...args);
+          },
+          isPending() {
+            return !done;
+          },
+          reset() {
+            done = false;
+          },
+        };
+      }
+
+      function getContainedImageDimensions(element, widthToHeightRatio) {
+        const { offsetHeight: h, offsetWidth: w } = element;
+        const widthFromHeight = h / widthToHeightRatio;
+        const heightFromWidth = w * widthToHeightRatio;
+
+        if (widthFromHeight <= w) {
+          return [widthFromHeight, widthFromHeight * widthToHeightRatio];
+        }
+        return [heightFromWidth / widthToHeightRatio, heightFromWidth];
+      }
+
+      function getEyeDimensions(imageWidth, imageHeight) {
+        return [eyeXFraction * imageWidth, eyeYFraction * imageHeight];
+      }
+    </script>
+  </body>
+</html>
